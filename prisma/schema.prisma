@@ -13,7 +13,8 @@ model User {
   passwordHash    String?
   firstName       String
   lastName        String
-  role            String   @default("member")
+  role                String   @default("member")
+  mustChangePassword  Boolean  @default(false)
   keapContactId   String?
   xeroContactId   String?
   createdAt       DateTime @default(now())

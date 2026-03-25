@@ -8,6 +8,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!session || (session.user as any)?.role !== 'admin') {
     redirect('/auth/signin')
   }
+  if ((session.user as any)?.mustChangePassword) {
+    redirect('/auth/change-password')
+  }
 
   const unreadCount = await prisma.ticket.count({
     where: { status: { in: ['new', 'open', 'ai-draft-ready'] } },
