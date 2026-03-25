@@ -1,5 +1,5 @@
 import { Worker, Job } from 'bullmq'
-import { getRedisConnection, eventbriteSyncQueue } from './queue'
+import { getRedisConnection, getEventbriteSyncQueue } from './queue'
 import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/encryption'
 import { EventbriteService } from '@/lib/integrations/eventbrite'
@@ -7,7 +7,7 @@ import { Smtp2goService } from '@/lib/integrations/smtp2go'
 import { createEventIcs } from '@/lib/calendar/ical'
 
 export async function triggerEventbriteSync(): Promise<void> {
-  await eventbriteSyncQueue.add('eventbrite-sync', {}, { jobId: `eb-sync-${Date.now()}` })
+  await getEventbriteSyncQueue().add('eventbrite-sync', {}, { jobId: `eb-sync-${Date.now()}` })
 }
 
 export async function runEventbriteSync(): Promise<{ attendees: number; errors: string[] }> {

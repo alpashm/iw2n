@@ -1,12 +1,12 @@
 import { Worker, Job } from 'bullmq'
-import { getRedisConnection, keapSyncQueue } from './queue'
+import { getRedisConnection, getKeapSyncQueue } from './queue'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { decrypt } from '@/lib/encryption'
 import { KeapService } from '@/lib/integrations/keap'
 
 export async function triggerKeapSync(): Promise<void> {
-  await keapSyncQueue.add('keap-sync', {}, { jobId: `keap-sync-${Date.now()}` })
+  await getKeapSyncQueue().add('keap-sync', {}, { jobId: `keap-sync-${Date.now()}` })
 }
 
 export async function runKeapSync(): Promise<{ contacts: number; errors: string[] }> {

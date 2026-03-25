@@ -1,12 +1,12 @@
 import { Worker, Job } from 'bullmq'
-import { getRedisConnection, inboxPollQueue } from './queue'
+import { getRedisConnection, getInboxPollQueue } from './queue'
 import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/encryption'
 import { GraphService } from '@/lib/integrations/graph'
 import { ClaudeService } from '@/lib/integrations/claude'
 
 export async function triggerInboxPoll(): Promise<void> {
-  await inboxPollQueue.add('inbox-poll', {}, { jobId: `inbox-${Date.now()}` })
+  await getInboxPollQueue().add('inbox-poll', {}, { jobId: `inbox-${Date.now()}` })
 }
 
 export async function runInboxPoll(): Promise<{ tickets: number; errors: string[] }> {

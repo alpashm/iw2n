@@ -1,5 +1,5 @@
 import { Worker, Job } from 'bullmq'
-import { getRedisConnection, attendanceSheetQueue } from './queue'
+import { getRedisConnection, getAttendanceSheetQueue } from './queue'
 import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/encryption'
 import { generateAttendanceSheetPdf } from '@/lib/pdf/attendanceSheet'
@@ -7,7 +7,7 @@ import { Smtp2goService } from '@/lib/integrations/smtp2go'
 import { format, addDays, startOfDay, endOfDay } from 'date-fns'
 
 export async function triggerAttendanceSheetCron(): Promise<void> {
-  await attendanceSheetQueue.add('attendance-sheet-cron', {})
+  await getAttendanceSheetQueue().add('attendance-sheet-cron', {})
 }
 
 export async function runAttendanceSheetCron(): Promise<void> {
