@@ -1,0 +1,348 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  passwordHash    String?
+  firstName       String
+  lastName        String
+  role            String   @default("member")
+  keapContactId   String?
+  xeroContactId   String?
+  createdAt       DateTime @default(now())
+  memberships     GroupMembership[]
+  attendances     Attendee[]
+  dealsAssigned   Deal[]
+  memberPackages  MemberPackage[]
+  referralsA      Referral[] @relation("PersonA")
+  referralsB      Referral[] @relation("PersonB")
+  xeroLink        XeroLink?
+  accounts        Account[]
+  sessions        Session[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  @@unique([identifier, token])
+}
+
+model Group {
+  id                  String   @id @default(cuid())
+  name                String
+  slug                String   @unique
+  description         String?
+  type                String
+  coverImage          String?
+  status              String   @default("active")
+  keapTagId           String?
+  timezone            String   @default("Europe/London")
+  calendarVisibility  String   @default("members")
+  memberships         GroupMembership[]
+  events              Event[]
+  campaigns           EmailCampaign[]
+  reminderConfigs     ReminderConfig[]
+  calendarFeed        CalendarFeed?
+}
+
+model GroupMembership {
+  id             String    @id @default(cuid())
+  userId         String
+  groupId        String
+  joinedAt       DateTime  @default(now())
+  status         String    @default("active")
+  unsubscribedAt DateTime?
+  user           User      @relation(fields: [userId], references: [id])
+  group          Group     @relation(fields: [groupId], references: [id])
+  @@unique([userId, groupId])
+}
+
+model Event {
+  id                String    @id @default(cuid())
+  groupId           String
+  title             String
+  description       String?
+  startDatetime     DateTime
+  endDatetime       DateTime
+  timezone          String    @default("Europe/London")
+  location          String?
+  onlineLink        String?
+  type              String
+  coverImage        String?
+  capacity          Int?
+  status            String    @default("draft")
+  eventbriteEventId String?
+  eventbriteUrl     String?
+  group             Group     @relation(fields: [groupId], references: [id])
+  attendees         Attendee[]
+  referrals         Referral[]
+}
+
+model Attendee {
+  id                  String    @id @default(cuid())
+  eventId             String
+  userId              String?
+  keapContactId       String?
+  name                String
+  email               String
+  ticketType          String?
+  eventbriteOrderId   String?   @unique
+  checkedIn           Boolean   @default(false)
+  registeredAt        DateTime  @default(now())
+  icsSent             Boolean   @default(false)
+  event               Event     @relation(fields: [eventId], references: [id])
+  user                User?     @relation(fields: [userId], references: [id])
+}
+
+model KeapContactCache {
+  id            String   @id @default(cuid())
+  keapId        String   @unique
+  firstName     String
+  lastName      String
+  email         String
+  phone         String?
+  company       String?
+  tags          Json     @default("[]")
+  customFields  Json     @default("{}")
+  rawData       Json     @default("{}")
+  lastSyncedAt  DateTime @default(now())
+}
+
+model XeroContactCache {
+  id                 String   @id @default(cuid())
+  xeroContactId      String   @unique
+  name               String
+  email              String?
+  phone              String?
+  company            String?
+  outstandingBalance Float    @default(0)
+  lastSyncedAt       DateTime @default(now())
+  xeroLink           XeroLink?
+}
+
+model XeroLink {
+  id              String           @id @default(cuid())
+  emsUserId       String           @unique
+  xeroContactId   String           @unique
+  matchStatus     String           @default("unmatched")
+  matchedBy       String?
+  confirmedAt     DateTime?
+  user            User             @relation(fields: [emsUserId], references: [id])
+  xeroContact     XeroContactCache @relation(fields: [xeroContactId], references: [xeroContactId])
+}
+
+model Package {
+  id              String          @id @default(cuid())
+  name            String
+  description     String?
+  price           Float
+  billingType     String
+  includedGroups  Json            @default("[]")
+  status          String          @default("active")
+  memberPackages  MemberPackage[]
+}
+
+model MemberPackage {
+  id              String    @id @default(cuid())
+  userId          String
+  packageId       String
+  status          String    @default("active")
+  startedAt       DateTime  @default(now())
+  expiresAt       DateTime?
+  xeroInvoiceId   String?
+  user            User      @relation(fields: [userId], references: [id])
+  package         Package   @relation(fields: [packageId], references: [id])
+}
+
+model Pipeline {
+  id           String  @id @default(cuid())
+  name         String
+  stages       Json
+  outcomeWin   String  @default("Won")
+  outcomeLoss  String  @default("Lost")
+  deals        Deal[]
+}
+
+model Deal {
+  id           String         @id @default(cuid())
+  pipelineId   String
+  contactId    String?
+  title        String
+  value        Float?
+  stage        String
+  status       String         @default("open")
+  outcome      String?
+  assignedTo   String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  pipeline     Pipeline       @relation(fields: [pipelineId], references: [id])
+  assignedUser User?          @relation(fields: [assignedTo], references: [id])
+  activities   DealActivity[]
+}
+
+model DealActivity {
+  id        String   @id @default(cuid())
+  dealId    String
+  type      String
+  note      String?
+  createdBy String?
+  createdAt DateTime @default(now())
+  deal      Deal     @relation(fields: [dealId], references: [id])
+}
+
+model Ticket {
+  id             String    @id @default(cuid())
+  fromName       String
+  fromEmail      String
+  subject        String
+  bodyHtml       String
+  receivedAt     DateTime
+  status         String    @default("new")
+  graphMessageId String    @unique
+  assignedTo     String?
+  contactId      String?
+  tag            String?
+  aiDraft        String?
+  repliedAt      DateTime?
+  notes          String?
+}
+
+model EmailTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  category  String
+  subject   String
+  htmlBody  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EmailSignature {
+  id          String  @id @default(cuid())
+  name        String
+  htmlContent String
+  isDefault   Boolean @default(false)
+  groupId     String?
+}
+
+model EmailCampaign {
+  id           String    @id @default(cuid())
+  groupId      String?
+  templateId   String?
+  subject      String
+  htmlBody     String
+  status       String    @default("draft")
+  scheduledAt  DateTime?
+  sentAt       DateTime?
+  senderName   String
+  senderEmail  String
+  signatureId  String?
+  group        Group?    @relation(fields: [groupId], references: [id])
+  emailLogs    EmailLog[]
+}
+
+model EmailLog {
+  id             String    @id @default(cuid())
+  campaignId     String?
+  referralId     String?
+  ticketId       String?
+  userId         String?
+  email          String
+  type           String
+  smtp2goEmailId String?
+  status         String    @default("queued")
+  openedAt       DateTime?
+  sentAt         DateTime  @default(now())
+  campaign       EmailCampaign? @relation(fields: [campaignId], references: [id])
+}
+
+model Referral {
+  id                  String    @id @default(cuid())
+  personAId           String
+  personBId           String
+  eventId             String?
+  eventbriteEventId   String?
+  eventTitle          String?
+  eventDate           DateTime?
+  templateId          String?
+  personalNote        String?
+  sentBy              String?
+  sentAt              DateTime  @default(now())
+  smtp2goEmailId      String?
+  qualityScore        Int?
+  feedbackA           String?
+  feedbackB           String?
+  personA             User      @relation("PersonA", fields: [personAId], references: [id])
+  personB             User      @relation("PersonB", fields: [personBId], references: [id])
+  event               Event?    @relation(fields: [eventId], references: [id])
+}
+
+model IntegrationSetting {
+  id             String    @id @default(cuid())
+  key            String    @unique
+  valueEncrypted String
+  readOnly       Boolean   @default(false)
+  lastTestedAt   DateTime?
+  status         String    @default("unconfigured")
+}
+
+model SyncLog {
+  id         String   @id @default(cuid())
+  source     String
+  direction  String
+  records    Int      @default(0)
+  errors     String?
+  syncedAt   DateTime @default(now())
+}
+
+model ReminderConfig {
+  id          String  @id @default(cuid())
+  groupId     String?
+  eventId     String?
+  offsetHours Int
+  templateId  String?
+  enabled     Boolean @default(true)
+  group       Group?  @relation(fields: [groupId], references: [id])
+}
+
+model CalendarFeed {
+  id              String   @id @default(cuid())
+  groupId         String   @unique
+  slug            String   @unique
+  icalToken       String   @unique @default(cuid())
+  lastGeneratedAt DateTime?
+  group           Group    @relation(fields: [groupId], references: [id])
+}

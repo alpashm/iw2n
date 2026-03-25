@@ -1,0 +1,33 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://ems:password@db:5432/ems
+      REDIS_URL: redis://cache:6379
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+    depends_on:
+      - db
+      - cache
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ems
+      POSTGRES_USER: ems
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  cache:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
